@@ -164,7 +164,7 @@
                                 
                                 <div class="fle flex-col space-y-3">
                                     <button class="bg-green-50 w-full border-gray-500 py-5 text-green-600 font-semibold max-w-full max-h-full rounded-xl">
-                                        {{ $candidat->percentage() }} %
+                                        {{ $candidat->percentage }} %
                                     </button>
                                      <button class="bg-blue-50 w-full border-gray-500 py-5 text-blue-600 font-semibold max-w-full max-h-full rounded-xl">
                                         {{ $candidat->countvote }} {{ $candidat->countvote == 1 ? 'vote' : 'votes' }}
@@ -185,6 +185,11 @@
                     </div>
     
     
+                    @inject('statsService', 'App\Services\StatsService')
+
+                    <div class="candidate-stats">
+                        Pourcentage : {{ $statsService->calculatePercentage($candidat) }}%
+                    </div>
         
                 </div>
             </div>

@@ -53,26 +53,5 @@ class Candidate extends Model
         return $this->hasMany(Image::class); // Relation standard
     }
 
-    public function percentage()
-    {
-        // Récupère tous les candidats de la même session
-        $candidats = $this->session->candidates;
-
-        // Calcule le total des votes pour la session (tous les candidats confondus)
-        $total_votes_session = 0;
-        foreach ($candidats as $cand) {
-            $total_votes_session += $cand->vote_count()->count();
-        }
-
-        // Votes pour ce candidat
-        $candidate_votes = $this->vote()->count();
-
-        if ($total_votes_session === 0) {
-            return 0;
-        }
-
-        // dd($total_votes_session, $candidate_votes);
-        //return round(($candidate_votes * 100) / $total_votes_session, 2);
-        return 10;
-    }
+    
 }   

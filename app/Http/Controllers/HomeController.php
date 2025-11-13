@@ -1,12 +1,28 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Services\StatsService;
 use App\Models\{Candidate,Session};
 
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
 {
+    public function __construct(
+        private StatsService $statsService
+    ) {}
+
+    public function show(Candidate $candidate)
+    {
+        $percentage = $this->statsService->calculatePercentage($candidate);
+        
+        return view('candidate.show', [
+            'candidate' => $candidate,
+            'percentage' => $percentage
+        ]);
+    }
+
+
     public function index()
     {
         $candidats = Candidate::all();
@@ -31,8 +47,7 @@ class HomeController extends Controller
                 $query->withCount('vote'); // Compte les votes pour chaque candidat
             }
         ])->findOrFail($id);  
-        dd($session);      
-
+        //dd($session);      
         return view('sessionitem', compact('session'));
     }
 
@@ -46,7 +61,6 @@ class HomeController extends Controller
 
     public function resultofsession(Request $request){
          try {
-
             $session_id = $request-> $id;
 
             // Récupère le candidat avec le plus de votes
@@ -73,7 +87,6 @@ class HomeController extends Controller
                 'topCandidates' => $topCandidates,
                 'allCandidates' => $allCandidates
             ]);
-
         } catch (\Exception $e) {
             \Log::error('Erreur bestCandidate: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Erreur lors du calcul des résultats'. $e->getMessage());
