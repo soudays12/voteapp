@@ -11,7 +11,6 @@ class SessionController extends Controller
     // Affiche le formulaire d’ajout
     public function addSession()
     { 
-        
         return view('dashboard.add.addSession');  
     }
 
@@ -82,63 +81,6 @@ class SessionController extends Controller
     }
 
     
-
-    // Crée une session et ses candidats 
-    /*
-    public function store(Request $request)
-    {
-        if(isset($request->date_fin) && $request->date_fin < now()){
-            if(isset($request->date_debut) && $request->date_debut < now()){
-                if($request->date_debut < $request->date_fin){
-                    return redirect()->back()->withErrors(['date_debut' => 'La date de début ne peut pas être antérieure à la date de fin.'])->withInput();
-
-                }
-
-                return redirect()->back()->withErrors(['date_debut' => 'La date de début ne peut pas être antérieure à la date actuelle.'])->withInput();
-            }else{
-                if(!isset($request->date_debut)){
-                    return redirect()->back()->withErrors(['date_fin' => 'La date de fin ne peut pas être antérieure à la date actuelle.'])->withInput();
-                }
-            }
-
-            return redirect()->back()->withErrors(['date_fin' => 'La date de fin ne peut pas être antérieure à la date actuelle.'])->withInput();
-        }
-        if($request->date_debut == null){
-            $date_debut = now();
-        }
-
-        $validated = $request->validate([
-            'nom' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'date_debut' => 'nullable|date',
-            'date_fin' => 'nullable|date',
-            'candidats' => 'required|string',
-        ]);
-    
-        // 1️⃣ Créer la session
-        $session = Session::create([
-            'nom' => $validated['nom'],
-            'description' => $validated['description'],
-            'date_debut' => $validated['date_debut'],
-            'date_fin' => $validated['date_fin'],
-        ]);
-    
-        // 2️⃣ Enregistrer les candidats associés
-        /*
-        $candidats = json_decode($validated['candidats'], true);
-        foreach ($candidats as $candidat) {
-            Candidate::create([
-                'session_id' => $session->id,
-                'nom' => $candidat['nom'],
-                'description' => $candidat['description'],
-                // tu peux gérer l'image ici plus tard si tu veux
-            ]);
-        }
-        
-
-        return redirect()->back()->with('success', 'Session et candidats enregistrés avec succès !');
-    }
-    */
 
 
     // Met à jour une session

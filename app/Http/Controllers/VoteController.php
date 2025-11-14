@@ -7,7 +7,7 @@ use App\Models\{UserSession,Vote};
 
 class VoteController extends Controller
 {
-    public function vote(Request $request, $session_id) 
+    public function vote(Request $request, $session_id,$candidate_id,$voting_id) 
     {
 
         $user = auth()->user();
@@ -15,35 +15,29 @@ class VoteController extends Controller
         // Vérifier si l'utilisateur a déjà voté pour ce candidat
         $existingVote = UserSession::where('user_id', $user->id)
             ->where('session_id', $session_id)
-            ->first();
+            ->exists();
+
 
         if ($existingVote) {
             // Gérer le cas où l'utilisateur a déjà voté
-            return redirect()->back()->with('error', 'Désolé vous avez déja voté un candidat.');
+            return redirect()->back()->with('error', 'Désolé vous avez déja vote un candidat pour cette session.');
         }else{
             // continuer le processus de vote
-            
             // Enregistrer le vote
             // passons par une transaction pour enregistrer le vote et incrementer le nombre de vote du candidat
-            DB::transaction(function () use ($session_id, $request,$user) 
+            DB::transaction(function () use ($session_id, $request,$user,$candidate_id,$voting_id) 
             {
-                
-
                 // les tables concernés
                 $vote = Vote::create([
-                    'voting_id' => $request->voting_id,
+                    'voting_id' => $voting_id,
                 ]);
 
                 $vote = UserSession::create([
                     'user_id' => $user->id,
-                    'session_id' => $request->session_id,
+                    'session_id' => $session_id,
                 ]);
+
                  // les tables concernés
-
-
-                $candidate_id = $request->candidate_id;
-
-
                 DB::table('candidates')->where('id',$candidate_id)->increment('countvote');
 
                 return redirect()->back()->with('success', 'Vote enregistré avec succès.');

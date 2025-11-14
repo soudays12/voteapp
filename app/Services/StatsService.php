@@ -2,35 +2,47 @@
 
 namespace App\Services;
 
-use App\Models\Session;
 use App\Models\Candidate;
+use App\Models\Vote;
 
 class StatsService
 {
-    public function calculatePercentage(Candidate $candidate): float
+    public function getCandidatePercentage(Candidate $candidate): float
     {
-        // Récupère tous les candidats de la même session
-        $candidats = $candidate->session->candidates;
+        if (!$candidate->session_id) {
+            return 0.0;
+        }
 
-        // Calcule le total des votes pour la session
-        $total_votes_session = 0;
-        foreach ($candidats as $cand) {
-            $total_votes_session += $candidate->votes()->count();
+        // Compte total des votes pour tous les candidats de la session
+        $totalVotes = Vote::whereHas('candidate', function ($query) use ($candidate) {
+            $query->where('session_id', $candidate->session_id);
+        })->count();
+
+        if ($totalVotes === 0) {
+            return 0.0;
         }
 
         // Votes pour ce candidat
-        $candidate_votes = $candidate->votes()->count();
+        $candidateVotes = $candidate->vote()->count();
 
-        if ($total_votes_session === 0) {
-            return 0;
-        }
-
-        return round(($candidate_votes * 100) / $total_votes_session, 2);
+        return round(($candidateVotes * 100) / $totalVotes, 2);
     }
 
-    // Autres méthodes statistiques...
-    public function getSessionStats(Session $session): array
+    public function getSessionStats(int $sessionId): array
     {
-        // Implémentation...
+        $candidates = Candidate::where('session_id', $sessionId)
+            ->withCount('vote')
+            ->get();
+
+        $totalVotes = $candidates->sum('vote_count');
+
+        return $candidates->map(function ($candidate) use ($totalVotes) {
+            return [
+                'candidate_id' => $candidate->id,
+                'nom' => $candidate->nom,
+                'votes' => $candidate->vote_count,
+                'percentage' => $totalVotes > 0 ? round(($candidate->vote_count * 100) / $totalVotes, 2) : 0.0
+            ];
+        })->toArray();
     }
 }

@@ -42,6 +42,7 @@
                 text: '{{ session('success') }}',
             });
         </script>
+        {{ session()->forget('success') }}
     @endif
     
     @if(session('error'))
@@ -52,6 +53,7 @@
                 text: '{{ session('error') }}',
             });
         </script>
+        {{ session()->forget('error') }}
     @endif
     
     <div class="container-screen">
@@ -88,7 +90,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{{ route('dashboard.elections') }}" class="sidebar-link">
+                        <a href="{{ route('dashboard.resultats') }}" class="sidebar-link">
                             <i class="fas fa-file-alt icon"></i>
                             <span>Election</span>
                         </a>

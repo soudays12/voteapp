@@ -22,13 +22,21 @@ Route::prefix('nav')->group(function () {
     Route::get('resultofsession/{id}', [HomeController::class, 'resultofsession'])->name('resultofsession');
 });
 
-// Authentification
+// Authentification user
 Route::prefix('auth')->group(function () {
     Route::post('register', [UserController::class, 'register'])->name('register');
     Route::get('login', [AuthController::class, 'login'])->name('login');
     Route::post('authenticate', [AuthController::class, 'authenticate'])->name('authenticate');
     Route::get('logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('inscription', [AuthController::class, 'inscription'])->name('inscription');
+});
+
+
+// Authentification admin
+Route::prefix('adminauth')->name('admin.')->group(function () {
+    Route::get('login', [AdminAuthController::class, 'login'])->name('login');
+    Route::post('authenticate', [AdminAuthController::class, 'authenticate'])->name('authenticate');
+    Route::get('logout', [AdminAuthController::class, 'logout'])->name('logout');
 });
 
 // Vote
@@ -40,12 +48,10 @@ Route::prefix('vote')->group(function () {
 Route::prefix('candidate')->name('candidate.')->group(function () {
     Route::get('detail/{candidat_id}', [CandidateController::class, 'detailCandidate'])->name('detail');
     Route::get('edit/{candidat_id}', [CandidateController::class, 'editCandidate'])->name('edit');
-    Route::post('update/{candidat_id}', [CandidateController::class, 'updateCandidate'])->name('update');
-    Route::delete('delete/{candidat_id}', [CandidateController::class, 'deleteCandidate'])->name('delete');
-
+    Route::post('update/{candidat_id}', [CandidateController::class, 'update'])->name('update');
+    Route::get('delete/{candidat_id}', [CandidateController::class, 'deleteCandidate'])->name('delete');
     Route::post('store', [CandidateController::class, 'store'])->name('store');
     Route::get('show/{candidat_id}', [CandidateController::class, 'show'])->name('show');
-
     Route::get('voteCount/{candidat_id}', [CandidateController::class, 'voteCount'])->name('voteCount');
     Route::get('percentage/{candidat_id}', [CandidateController::class, 'percentage'])->name('percentage');
     Route::get('totalAllVote', [CandidateController::class, 'totalAllVote'])->name('totalAllVote');
@@ -65,7 +71,6 @@ Route::prefix('dashboard')->name('dashboard.')->group(function () {
     Route::post('store', [SessionController::class,  'store'])->name('storeSession');
     Route::get('detailSession/{session_id}', [SessionController::class, 'detailSession'])->name('detailSession');
     Route::get('editSession/{session_id}', [SessionController::class, 'editSession'])->name('editSession');
-
     Route::post('updateSession', [SessionController::class, 'updateSession'])->name('updateSession');
     Route::get('deleteSession/{session_id}', [SessionController::class, 'deleteSession'])->name('deleteSession');
 });

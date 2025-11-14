@@ -14,7 +14,7 @@ class HomeController extends Controller
 
     public function show(Candidate $candidate)
     {
-        $percentage = $this->statsService->calculatePercentage($candidate);
+        $percentage = $this->statsService->getCandidatePercentage($candidate);
         
         return view('candidate.show', [
             'candidate' => $candidate,
@@ -42,12 +42,15 @@ class HomeController extends Controller
     public function sessionitem($id)
     {
         // Charger la session avec les candidats liés
-        $session = Session::with([
-            'candidates' => function ($query) {
-                $query->withCount('vote'); // Compte les votes pour chaque candidat
-            }
-        ])->findOrFail($id);  
-        //dd($session);      
+        $session = Session::with('candidates')->findOrFail($id);
+        
+        // Calculer les pourcentages pour chaque candidat
+        $session->candidates->each(function($candidat) {
+            $candidat->percentage = $this->statsService->getCandidatePercentage($candidat);
+            // Debug temporaire
+            $candidat->debug_votes = $candidat->vote()->count();
+        });
+        
         return view('sessionitem', compact('session'));
     }
 
@@ -59,37 +62,37 @@ class HomeController extends Controller
     }
 
 
-    public function resultofsession(Request $request){
-         try {
-            $session_id = $request-> $id;
+    public function resultofsession($id){
+        try {
+            $session = Session::with('candidates')->findOrFail($id);
 
-            // Récupère le candidat avec le plus de votes
-            $candidates = Candidate::count('votes')
-                ->orderBy('votes_count', 'DESC')
-                ->where('session_id', $session_id)
-                ->first();
+            // Calculer les statistiques pour tous les candidats
+            $candidats = $session->candidates->map(function($candidate) {
+                $candidate->votes_count = $candidate->vote()->count();
+                $candidate->percentage = $this->statsService->getCandidatePercentage($candidate);
+                return $candidate;
+            })->sortByDesc(function($candidate) {
+                // Tri par votes_count puis par created_at (le plus ancien gagne en cas d'égalité)
+                return [$candidate->votes_count, -$candidate->created_at->timestamp];
+            });
 
-            // Ou les top 3 candidats
-            $topCandidates = Candidate::count('votes')
-                ->orderBy('votes_count', 'DESC')
-                ->where('session_id', $session_id)
-                ->take(3)
-                ->get();
+            // Vérifier s'il y a égalité pour le meilleur candidat
+            $maxVotes = $candidats->first()->votes_count ?? 0;
+            $winners = $candidats->filter(function($candidate) use ($maxVotes) {
+                return $candidate->votes_count === $maxVotes;
+            });
 
-            // Tous les candidats avec leur nombre de votes pour affichage
-            $allCandidates = Candidate::count('votes')
-                ->orderBy('votes_count', 'DESC')
-                ->where('session_id', $session_id)
-                ->get();
+            $bestCandidate = $winners->count() > 1 ? null : $candidats->first();
+            $tiedCandidates = $winners->count() > 1 ? $winners : collect();
 
-            return view('resultofsession', [
-                'bestCandidate' => $bestCandidate,
-                'topCandidates' => $topCandidates,
-                'allCandidates' => $allCandidates
-            ]);
+            // Top 3 candidats
+            $topCandidates = $candidats->take(3);
+
+            return view('resultofsession', compact('session', 'bestCandidate', 'topCandidates', 'candidats', 'tiedCandidates'));
+
         } catch (\Exception $e) {
-            \Log::error('Erreur bestCandidate: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Erreur lors du calcul des résultats'. $e->getMessage());
+            \Log::error('Erreur resultofsession: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Erreur lors du calcul des résultats: ' . $e->getMessage());
         }
     }
 

@@ -4,9 +4,13 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\{Session,Candidate, User, Vote};
+use App\Services\StatsService;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private StatsService $statsService
+    ) {}
 
     // ------------------    partie 1 -----------------
     // retournon les vues
@@ -32,7 +36,14 @@ class DashboardController extends Controller
     public function candidates(){
         $candidats = Candidate::all();
         $sessions = Session::all();
-        return view("dashboard.candidates",compact('candidats','sessions'));
+        
+        // Calculer les pourcentages pour chaque candidat
+        $candidatsWithPercentage = $candidats->map(function($candidat) {
+            $candidat->percentage = $this->statsService->getCandidatePercentage($candidat);
+            return $candidat;
+        });
+        
+        return view("dashboard.candidates",compact('candidatsWithPercentage','sessions'));
     }
     //la vue election qui retourne les elections
     public function elections()
@@ -46,31 +57,46 @@ class DashboardController extends Controller
         $sessions = Session::all();
         return view('dashboard.results', compact('sessions'));
     }
-
-    // resultats
-  
-    public function resultatSession(Session $session)
+    // resultats d'une session
+    public function resultatSession($id)
     {
+        try {
+            $session = Session::with('candidates')->findOrFail($id);
 
-        return view('dashboard.resultSession', compact('session'));
+            // Calculer les statistiques pour tous les candidats
+            $candidats = $session->candidates->map(function($candidate) {
+                $candidate->votes_count = $candidate->vote()->count();
+                $candidate->percentage = $this->statsService->getCandidatePercentage($candidate);
+                return $candidate;
+            })->sortByDesc(function($candidate) {
+                // Tri par votes_count puis par created_at (le plus ancien gagne en cas d'égalité)
+                return [$candidate->votes_count, -$candidate->created_at->timestamp];
+            });
+
+            // Vérifier s'il y a égalité pour le meilleur candidat
+            $maxVotes = $candidats->first()->votes_count ?? 0;
+            $winners = $candidats->filter(function($candidate) use ($maxVotes) {
+                return $candidate->votes_count === $maxVotes;
+            });
+
+            $bestCandidate = $winners->count() > 1 ? null : $candidats->first();
+            $tiedCandidates = $winners->count() > 1 ? $winners : collect();
+
+            // Top 3 candidats
+            $topCandidates = $candidats->take(3);
+
+            return view('dashboard.resultatSession', compact('session', 'bestCandidate', 'topCandidates', 'candidats', 'tiedCandidates'));
+
+        } catch (\Exception $e) {
+            \Log::error('Erreur resultofsession: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Erreur lors du calcul des résultats: ' . $e->getMessage());
+        }
     }
     
     
     
     
-    
-    
-    
-
-
-
-
-
-
-
-
-
-     // ------------------    partie 3 -----------------
+    // ------------------    partie 3 -----------------
     //petit crud laravel
   
     // action de l'enregistrement d'un post

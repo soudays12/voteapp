@@ -16,25 +16,17 @@ class Candidate extends Model
         "description", 
         "photo",
         "session_id",
-        "countvote",
     ];
 
     protected static function boot()
     {
         parent::boot();
         static::creating(function ($model) {
-            // Try to include the session id in the voting id for easier grouping/inspection
-            // If session_id is not set yet, fall back to a plain UUID.
-            $sessionId = $model->session_id ?? ($model->session?->id ?? null);
-
-            // Generate a UUID
             $uuid = (string) Str::uuid();
-
-            if ($sessionId) {
-                // Format: S<sessionId>-<short-uuid> (shortened for readability)
-                $model->voting_id = 'S' . $sessionId . '-' . substr(str_replace('-', '', $uuid), 0, 12);
+            
+            if ($model->session_id) {
+                $model->voting_id = 'S' . $model->session_id . '-' . substr(str_replace('-', '', $uuid), 0, 12);
             } else {
-                // Full uuid fallback
                 $model->voting_id = $uuid;
             }
         });
@@ -45,13 +37,11 @@ class Candidate extends Model
     }
     
     public function vote(){
-        return $this->hasMany(Vote::class,'voting_id');
+        return $this->hasMany(Vote::class, 'voting_id', 'voting_id');
     }
     
     public function image()
     {
         return $this->hasMany(Image::class); // Relation standard
     }
-
-    
-}   
+}

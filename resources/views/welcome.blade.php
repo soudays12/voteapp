@@ -167,15 +167,15 @@
                 session :  {{ $candidat->session->nom }}
               </p>
               <p class="bg-blue-50 border-gray-500 py-5 text-blue-600 font-semibold w-full max-h-full rounded-xl">
-                  {{ $candidat->countvote }} {{ $candidat->countvote == 1 ? 'vote' : 'votes' }}
+                  {{ $candidat->countvote }}
               </p>
               
               @if(Auth::check())
-                  <a href="{{ route('vote', ['session_id' => $candidat->session->id,'candidate_id' => $candidat->id,'voting_id' => $candidat->voting_id]) }}" class="block w-full">
-                      <button class="bg-blue-500 hover:bg-blue-600 text-white font-semibold w-full py-3 rounded-xl transition shadow-md hover:shadow-lg">
-                          Voter pour {{ $candidat->nom }}
-                      </button>
-                  </a>
+                <a href="{{ route('vote', ['session_id' => $candidat->session->id,'candidate_id' => $candidat->id,'voting_id' => $candidat->voting_id]) }}" class="block w-full">
+                    <button class="bg-blue-500 hover:bg-blue-600 text-white font-semibold w-full py-3 rounded-xl transition shadow-md hover:shadow-lg">
+                        Voter pour {{ $candidat->nom }}
+                    </button>
+                </a>
               @endif
           </div>
         </div>

@@ -31,6 +31,7 @@
                 text: '{{ session('success') }}',
             });
         </script>
+        {{ session()->forget('success') }}
     @endif
     
     @if(session('error'))
@@ -41,6 +42,7 @@
                 text: '{{ session('error') }}',
             });
         </script>
+        {{ session()->forget('error') }}
     @endif
     
     <div class="container-screen">
@@ -54,13 +56,13 @@
                 <ul class="sidebar-menu">
                     <li>
                         <a href="{{ route('dashboard.index') }}" class="sidebar-link">
-                            <i class="fas fa-chart-line icon"></i>
+                            <i class="fas fa-tachometer-alt icon"></i>
                             <span>Tableau de bord</span>
                         </a>
                     </li>
                     <li>
                         <a href="{{ route('dashboard.sessions') }}" class="sidebar-link active">
-                            <i class="fas fa-users icon"></i>
+                            <i class="fas fa-calendar-alt icon"></i>
                             <span>Sessions</span> 
                         </a>
                     </li>
@@ -72,48 +74,50 @@
                     </li>
                     <li>
                         <a href="{{ route('dashboard.candidates') }}" class="sidebar-link ">
-                            <i class="fas fa-coins icon"></i>
+                            <i class="fas fa-user-tie icon"></i>
                             <span>Candidats</span>
                         </a>
                     </li>
                     <li>
                         <a href="{{ route('dashboard.resultats') }}" class="sidebar-link">
-                            <i class="fas fa-file-alt icon"></i>
+                            <i class="fas fa-chart-bar icon"></i>
                             <span>Resultats</span>
                         </a>
                     </li>
                 </ul>
             </nav>
-            <footer class="footer-aside">
-                <button class="circular-exit-button">
-                    <span class="fas fa-power-off"></span>
-                </button>
-                <br>
-                <span class="{{ route('logout') }}">Deconnexion</span>
+            <footer class="footer-aside mt-auto p-4">
+                <form action="{{ route('logout') }}" method="POST" class="w-full">
+                    @csrf
+                    <button type="submit" class="w-full flex items-center justify-center space-x-3 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors group">
+                        <i class="fas fa-power-off group-hover:rotate-12 transition-transform"></i>
+                        <span class="font-medium">Déconnexion</span>
+                    </button>
+                </form>
             </footer>
         </aside>
 
         <!-- Main content -->
         <main class="main">
             <div class="header">
-                <div>
-
-                    <div class="menu-and-title">
-                        <!-- Menu Toggle Button -->
-                        <button id="toggleSidebar" class="toggle-button">
-                            ☰
-                        </button>
-                        <h1 class="main-title">Gestion des Sessions</h1>
-
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between w-full">
+                    <div class="flex flex-col space-y-4 lg:space-y-0">
+                        <div class="menu-and-title flex items-center space-x-4">
+                            <!-- Menu Toggle Button -->
+                            <button id="toggleSidebar" class="toggle-button">
+                                ☰
+                            </button>
+                            <h1 class="main-title">Gestion des Sessions</h1>
+                        </div>
+                        <div class="tab-buttons flex items-center space-x-2">
+                            <button class="tab-button active" data-tab="toutes">Toutes</button>
+                            <button class="tab-button" data-tab="en-ligne">En ligne</button>
+                        </div>
                     </div>
-                    <div class="tab-buttons">
-                        <button class="tab-button active" data-tab="toutes">Toutes</button>
-                        <button class="tab-button" data-tab="en-ligne">En ligne</button>
+                    <div class="search-actions flex items-center space-x-3 mt-4 lg:mt-0">
+                        <input type="text" placeholder="Recherche..." class="search-input">
+                        <button class="btn-primary" id="openModal">Rechercher</button>
                     </div>
-                </div>
-                <div class="search-actions">
-                    <input type="text" placeholder="Recherche..." class="search-input">
-                    <button class="btn-primary" id="openModal"> Rechercher</button>
                 </div>
             </div>
             
@@ -165,7 +169,6 @@
                 }
             });
         });
-
     </script>
 </body>
 

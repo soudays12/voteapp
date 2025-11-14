@@ -7,14 +7,32 @@ use Illuminate\Support\Facades\{Auth, DB, Storage};
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Str;
-use App\Models\{Candidate, Image, Vote};
+use App\Models\{Candidate, Image, Vote,Session};
+use App\Services\StatsService;
 
 class CandidateController extends Controller
 {
 
+    public function __construct(
+        private StatsService $statsService
+    ) {}
+
+
+    public function detailCandidate($candidat_id)
+    {
+        $candidate = Candidate::with('session')->where('id',$candidat_id)->first();
+        $percentage = $this->statsService->getCandidatePercentage($candidate);
+        
+        return view('dashboard.detail.detailCandidate', compact('candidate','percentage'));
+    }
+
+
+    
+    
+    // ------------------    partie 2 -----------------
+    // partie crud
+    
     //on enregistre un candidat
-
-
     public function store(Request $request)
     {
         try {
@@ -87,36 +105,12 @@ class CandidateController extends Controller
                 ->with('error', 'Une erreur inattendue est survenue. Veuillez réessayer.' . $e->getMessage());
         }
     }
-
-   
-
-
-
-
-    // ------------------    partie 2 -----------------
-    // partie crud
-
     // les details des ressources
-    public function detailCandidate($candidate_id){
-        $candidate_info = Candidate::find($candidate_id);
-        return view('detail.detailCandidate', compact('candidate_info'));
-    }
-    public function editCandidates($candidate_id)
+    public function editCandidate($candidate_id)
     {
         $candidate_info = Candidate::find($candidate_id);
-        return view('edit.updateCandidate', compact('candidate_info'));
-    }
-    
-    // retourne les fonctions de mise à jour
-    public function updateCandidate(Request $request,$candidate_id){
-        $request->validate([
-            'title' => 'required|max:255',
-            'body' => 'required',
-        ]);
-        $post = Candidate::find($candidate_id);
-        $post->update($request->all());
-        return redirect()->route('posts.index')
-        ->with('success', 'Post updated successfully.');
+        $sessions = Session::all();
+        return view('dashboard.edit.editCandidate', compact('candidate_info', 'sessions'));
     }
 
     // action de suppression d'un post
@@ -127,28 +121,77 @@ class CandidateController extends Controller
         return redirect()->route('dashboard.candidates')->with('success', 'Informations du candidat modifiés avec succès !');
     }
 
-
-
-
-
-
-
-
-
-
-
     // mise à jour du candidat
-    public function update(Request $request, $id)
+    public function update(Request $request, $candidat_id)
     {
-        $request->validate([
-            'uuid' => 'required',
-            'nom' => 'required|string|max:255',
-            'description' => 'required|string|max:255',
-            'photo' => 'required|string|photo|max:255|unique:candidte',
-        ]);
-        $candidate = Candidate::find($id);
-        $candidate->update($request->all());
-        return redirect()->back()->with('success', 'Candidat modifié avec succès');
+        try {
+            $request->validate([
+                'nom' => 'required|string|max:255',
+                'description' => 'required|string|max:255',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'session_id' => 'required|exists:sessions,id'
+            ]);
+
+            DB::transaction(function () use ($request, $candidat_id) {
+                $candidate = Candidate::findOrFail($candidat_id);
+                $oldPhoto = $candidate->photo;
+
+                // Si une nouvelle image est uploadée
+                if ($request->hasFile('image')) {
+                    $file = $request->file('image');
+                    $nomOriginal = $file->getClientOriginalName();
+                    $taille = $file->getSize();
+                    $extension = $file->getClientOriginalExtension();
+                    $nomFichier = time() . '_' . uniqid() . '.' . $extension;
+
+                    // Supprimer l'ancienne photo
+                    if ($oldPhoto && file_exists(public_path('images/' . $oldPhoto))) {
+                        unlink(public_path('images/' . $oldPhoto));
+                    }
+
+                    // Déplacer la nouvelle photo
+                    $file->move(public_path('images'), $nomFichier);
+
+                    // Mettre à jour le candidat avec la nouvelle photo
+                    $candidate->update([
+                        'nom' => $request->nom,
+                        'description' => $request->description,
+                        'photo' => $nomFichier,
+                        'session_id' => $request->session_id,
+                    ]);
+
+                    // Mettre à jour ou créer l'enregistrement Image
+                    $candidate->image()->updateOrCreate(
+                        ['candidate_id' => $candidate->id],
+                        [
+                            'nom' => $nomOriginal,
+                            'taille' => $taille,
+                            'format' => $extension,
+                        ]
+                    );
+                } else {
+                    // Mise à jour sans changer la photo
+                    $candidate->update([
+                        'nom' => $request->nom,
+                        'description' => $request->description,
+                        'session_id' => $request->session_id,
+                    ]);
+                }
+            });
+
+            return redirect()->route('dashboard.candidates')->with('success', 'Candidat modifié avec succès');
+
+        } catch (ValidationException $e) {
+            return redirect()->back()
+                ->withErrors($e->errors())
+                ->withInput()
+                ->with('error', 'Erreur de validation: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de la mise à jour du candidat: ' . $e->getMessage());
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Erreur lors de la mise à jour: ' . $e->getMessage());
+        }
     }
  
     // suppression du candidat
@@ -160,7 +203,6 @@ class CandidateController extends Controller
     }
     
 
-
     // compter le nombre de vote du candidat
     public function voteCount($candidate_id)
     {
@@ -169,24 +211,15 @@ class CandidateController extends Controller
 
         return $VoteCount;
     }
- 
-    // calculer le pourcentage de reussite d'un candidat
-    public function percentage($candidate_id)
-    {
-        $total_candidats = Candidate::count();
-        $total_votes = Vote::count(); // Supprimer where('user_id')
-        $pourcentage = ($total_votes * 100) / max($total_candidats, 1); // Éviter division par zéro
-        
-        return $pourcentage;
-    }
 
 
-
-
-
+    // retourne la vue de edition
     public function edit($id)
     {
         $post = Post::find($id);
         return view('posts.edit', compact('post'));
     }
+
+
+
 }
